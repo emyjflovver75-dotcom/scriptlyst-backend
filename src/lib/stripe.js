@@ -2,9 +2,20 @@ const Stripe = require('stripe');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-function buildPaymentLink(userId) {
-  const base = process.env.STRIPE_PAYMENT_LINK;
-  return `${base}?client_reference_id=${userId}`;
+// plan: 'creator-monthly' ($17) | 'pro-monthly' ($37)
+function buildPaymentLink(userId, plan = 'pro-monthly') {
+  const base =
+    plan === 'creator-monthly'
+      ? process.env.STRIPE_PAYMENT_LINK_CREATOR
+      : process.env.STRIPE_PAYMENT_LINK_PRO ||
+        process.env.STRIPE_PAYMENT_LINK_CREATOR ||
+        process.env.STRIPE_PAYMENT_LINK;
+
+  if (!base) throw new Error(`No Stripe payment link configured for plan: ${plan}`);
+
+  // Encode plan into client_reference_id so the webhook can identify the tier
+  const ref = encodeURIComponent(`${userId}:${plan}`);
+  return `${base}?client_reference_id=${ref}`;
 }
 
 function constructEvent(rawBody, sig) {

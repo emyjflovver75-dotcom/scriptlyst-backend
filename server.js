@@ -13,17 +13,29 @@ const PORT = process.env.PORT || 10000;
 app.use('/api/webhooks', webhookRoutes);
 
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'https://scriptlyst.emyj888.com',
-    'http://localhost:3000',
-    'http://localhost:5173',
-  ],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const allowed = [
+      process.env.FRONTEND_URL || 'https://scriptlyst.emyj888.com',
+      'https://scriptlyst-frontend.vercel.app',
+    ];
+    if (
+      allowed.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      /^https?:\/\/localhost(:\d+)?$/.test(origin)
+    ) {
+      return callback(null, true);
+    }
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true,
 }));
 
 app.use(express.json());
 
-app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+const healthPayload = () => ({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/health', (_req, res) => res.json(healthPayload()));
+app.get('/api/health', (_req, res) => res.json(healthPayload()));
 
 app.use('/api/auth', authRoutes);
 app.use('/api', apiRoutes);

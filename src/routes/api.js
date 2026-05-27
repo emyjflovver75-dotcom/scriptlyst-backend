@@ -1,11 +1,38 @@
 const express = require('express');
+const Anthropic = require('@anthropic-ai/sdk');
 const { requireAuth } = require('../middleware/auth');
 const { generateScript } = require('../lib/claude');
 const { createVideo, waitForVideo } = require('../lib/heygen');
 const { buildPaymentLink } = require('../lib/stripe');
 const { supabaseAdmin: supabase } = require('../lib/supabase');
 
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
 const router = express.Router();
+
+// ─── General AI ───────────────────────────────────────────────────────────────
+
+router.post('/ai', requireAuth, async (req, res, next) => {
+  try {
+    const { prompt, system, messages } = req.body;
+    if (!prompt && (!messages || messages.length === 0)) {
+      return res.status(400).json({ error: 'prompt or messages is required' });
+    }
+
+    const msgs = messages || [{ role: 'user', content: prompt }];
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      ...(system && { system }),
+      messages: msgs,
+    });
+
+    res.json({ text: response.content[0].text });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ─── Script Generation ───────────────────────────────────────────────────────
 
@@ -186,8 +213,11 @@ router.get('/membership/status', requireAuth, async (req, res, next) => {
 router.post('/membership/upgrade', requireAuth, async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const redirectUrl = buildPaymentLink(userId);
-    res.json({ redirect_url: redirectUrl });
+    const plan = ['creator-monthly', 'pro-monthly'].includes(req.body?.plan)
+      ? req.body.plan
+      : 'pro-monthly';
+    const redirectUrl = buildPaymentLink(userId, plan);
+    res.json({ redirect_url: redirectUrl, plan });
   } catch (err) {
     next(err);
   }

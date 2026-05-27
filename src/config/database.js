@@ -76,4 +76,10 @@ CREATE POLICY "scriptlyst_generations: service role" ON scriptlyst_generations F
 CREATE POLICY "scriptlyst_memberships: service role" ON scriptlyst_memberships FOR ALL TO service_role USING (true) WITH CHECK (true);
 `;
 
-module.exports = { SCHEMA_SQL };
+// ─── Migration: two-tier pricing ─────────────────────────────────────────────
+// Run this once in Supabase SQL Editor after deploying two-tier pricing:
+const MIGRATION_TWO_TIER_SQL = `
+ALTER TABLE scriptlyst_memberships ADD COLUMN IF NOT EXISTS stripe_plan TEXT;
+`;
+
+module.exports = { SCHEMA_SQL, MIGRATION_TWO_TIER_SQL };
