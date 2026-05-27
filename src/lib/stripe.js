@@ -2,8 +2,8 @@ const Stripe = require('stripe');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-const LINK_CREATOR = process.env.STRIPE_PAYMENT_LINK_CREATOR || 'https://buy.stripe.com/bJe9AT8E8bET6no2Vl1gs05';
-const LINK_PRO     = process.env.STRIPE_PAYMENT_LINK_PRO     || 'https://buy.stripe.com/eVqeVd1bG8sH7rs3Zp1gs06';
+const LINK_CREATOR = 'https://buy.stripe.com/bJe9AT8E8bET6no2Vl1gs05';
+const LINK_PRO     = 'https://buy.stripe.com/eVqeVd1bG8sH7rs3Zp1gs06';
 
 // plan: 'creator-monthly' ($17) | 'pro-monthly' ($37)
 function buildPaymentLink(userId, plan = 'pro-monthly') {
