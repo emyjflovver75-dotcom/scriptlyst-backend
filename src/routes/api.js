@@ -61,7 +61,7 @@ router.post('/generate', requireAuth, async (req, res, next) => {
         .eq('type', 'script')
         .gte('created_at', today.toISOString());
 
-      if (count >= 3) {
+      if (count >= 5) {
         return res.status(429).json({
           error: 'Daily limit reached. Upgrade to Pro for unlimited generations.',
           upgrade_url: buildPaymentLink(userId),
