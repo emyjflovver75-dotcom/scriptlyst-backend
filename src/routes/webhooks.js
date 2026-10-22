@@ -72,6 +72,34 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
     }
   }
 
+  // Subscription cancelled or no longer paid -> remove access
+  const endedStatuses = ['canceled', 'unpaid', 'incomplete_expired'];
+  if (
+    event.type === 'customer.subscription.deleted' ||
+    (event.type === 'customer.subscription.updated' &&
+      endedStatuses.includes(event.data.object.status))
+  ) {
+    const subscriptionId = event.data.object.id;
+    try {
+      const now = new Date().toISOString();
+
+      await supabase
+        .from('scriptlyst_memberships')
+        .update({ is_active: false, expires_at: now })
+        .eq('stripe_subscription_id', subscriptionId);
+
+      await supabase
+        .from('scriptlyst_profiles')
+        .update({ plan: 'free', updated_at: now })
+        .eq('stripe_subscription_id', subscriptionId);
+
+      console.log(`[webhook] subscription ${subscriptionId} ended, access removed`);
+    } catch (err) {
+      console.error('[webhook] Cancellation update failed:', err.message);
+      return res.status(500).send('Database error');
+    }
+  }
+
   res.sendStatus(200);
 });
 

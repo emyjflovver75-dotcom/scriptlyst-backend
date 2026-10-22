@@ -107,7 +107,19 @@ router.post('/generate-video', requireAuth, async (req, res, next) => {
       .eq('id', userId)
       .single();
 
-    if (profile?.plan !== 'pro') {
+    // Creator ($17) is text-only. Video needs Pro ($37), or a manually granted Pro (no stripe_plan).
+    const { data: activeMembership } = await supabase
+      .from('scriptlyst_memberships')
+      .select('stripe_plan')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const isCreatorOnly = activeMembership?.stripe_plan === 'creator-monthly';
+
+    if (profile?.plan !== 'pro' || isCreatorOnly) {
       return res.status(403).json({
         error: 'Video generation requires a Pro membership.',
         upgrade_url: buildPaymentLink(userId),
